@@ -1,40 +1,39 @@
 package com.example.orderapi.repository.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Table (name = "orders")
 @Entity (name = "order")
 @Data
-public class Order {
+@NoArgsConstructor
+@AllArgsConstructor
+public class Order extends BaseEntity{
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "customer_email")
-    private String customerEmail;
+    @Column(name = "guest_email")
+    private String guestEmail;
 
-    @Column(name = "coupon_id")
-    private int couponId;
+    @ManyToOne
+    @JoinColumn(name="coupon_id")
+    private Coupon coupon;
 
     @Column
     private BigDecimal amount;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "orderProducts", joinColumns = @JoinColumn(name = "order_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "product_id", referencedColumnName = "id"))
     @JsonManagedReference
     private List<Product> products;
-
-    @Column(name = "transaction_id")
-    private int transactionId;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 }
