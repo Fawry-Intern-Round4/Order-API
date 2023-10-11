@@ -3,8 +3,10 @@ package com.example.orderapi.controller;
 import com.example.orderapi.DTO.OrderDTO;
 import com.example.orderapi.DTO.OrderItemRequest;
 import com.example.orderapi.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -18,8 +20,9 @@ public class OrderController {
     OrderService orderService;
 
     @PostMapping("/create")
+    @ResponseStatus(HttpStatus.CREATED)
     public OrderDTO createOrder(@RequestParam(required = false) String couponCode,
-                                @RequestBody List<OrderItemRequest> orderRequestItems) {
+                                @Valid @RequestBody List<OrderItemRequest> orderRequestItems) {
 
         return orderService.createOrder(couponCode, orderRequestItems);
     }

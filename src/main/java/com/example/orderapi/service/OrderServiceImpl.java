@@ -68,7 +68,7 @@ public class OrderServiceImpl implements OrderService {
         // create and store order
         OrderDTO orderDTO = new OrderDTO();
         orderDTO.setAmount(invoiceAmount);
-        if (couponDTO != null) orderDTO.setCouponID(couponDTO.getId());
+        orderDTO.setCouponID(couponDTO.getId());
         saveOrder(orderDTO);
 
         // send order notifications
