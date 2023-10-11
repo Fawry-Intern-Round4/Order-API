@@ -30,8 +30,24 @@ public class OrderServiceImpl implements OrderService {
 
     Client client;
 
+    //TODO: add entity to order items colums (orderid, product id, quantity, price)
     @Override
     public OrderDTO createOrder(String couponCode, List<OrderItemRequest> orderRequestItems) {
+        //TODO: check if CouponCode is valid
+
+        //TODO: consume coupon form coupon api
+
+        //TODO: consume product form store api if there is error throw exception
+
+        //TODO: get all products form product api
+
+        //TODO: calculate invoice amount
+
+        //TODO: withdraw invoice amount from guest's bank account
+
+        //TODO: deposit invoice amount to merchant's bank account
+
+        //TODO: send notification to notification api
 
         Mono<ResponseEntity<List<OrderItemResponse>>> stockResponse = client.consumeProductStock(orderRequestItems);
 
@@ -45,14 +61,15 @@ public class OrderServiceImpl implements OrderService {
                                 .defaultIfEmpty(BigDecimal.ZERO))
                 .block();
 
-
         CouponDTO couponDTO = null;
         if (client.validateCouponCode(couponCode).getBody().equals(true)){
             couponDTO = client.consumeCoupon(couponCode).getBody();
             if (couponDTO.getType().equals("fixed")) invoiceAmount = invoiceAmount.subtract(couponDTO.getValue());
             else invoiceAmount = invoiceAmount.subtract(invoiceAmount.multiply(couponDTO.getValue().divide(BigDecimal.valueOf(100))));
         }
-
+        else {
+            //TODO: throw exception
+        }
         // withdraw invoice amount from guest's bank account
         TransactionRequestModel withdrawRequestModel = new TransactionRequestModel();
         withdrawRequestModel.setAmount(invoiceAmount);
