@@ -1,4 +1,4 @@
-package com.example.orderapi.DTO;
+package com.example.orderapi.dto;
 
 import lombok.Data;
 import lombok.Getter;
