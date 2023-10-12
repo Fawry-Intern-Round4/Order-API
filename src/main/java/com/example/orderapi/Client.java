@@ -1,13 +1,10 @@
 package com.example.orderapi;
 
-import com.example.orderapi.DTO.*;
+import com.example.orderapi.dto.*;
 import com.example.orderapi.mapper.OrderMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -15,46 +12,45 @@ public class Client {
     @Autowired
     OrderMapper orderMapper;
 
-    private final WebClient couponApiClient;
-    private final WebClient storeApiClient;
-    private final WebClient bankApiClient;
-    private final WebClient notificationApiClient;
+    private final WebClient.Builder webClient;
 
     public Client(WebClient.Builder webClientBuilder) {
-        this.couponApiClient = webClientBuilder.baseUrl("COUPON_API_URL").build();
-        this.storeApiClient = webClientBuilder.baseUrl("STORE_API_URL").build();
-        this.bankApiClient = webClientBuilder.baseUrl("BANK_API_URL").build();
-        this.notificationApiClient = webClientBuilder.baseUrl("Notification_API_URL").build();
+        this.webClient = webClientBuilder;
     }
-    
+
     public ResponseEntity<Boolean> validateCouponCode(String couponCode){
-        return couponApiClient.post()
-                .uri("/coupons/validate?code={code}", couponCode)
+        return webClient.build()
+                .post()
+                .uri("lb://coupon-api/coupon/validate", uriBuilder -> uriBuilder.queryParam("code", couponCode).build())
                 .retrieve()
                 .toEntity(Boolean.class)
                 .block();
     }
     
-    public ResponseEntity<CouponDTO> consumeCoupon(String couponCode){
-        return couponApiClient.post()
-                .uri("/coupons/consume?code={code}", couponCode)
+    public ResponseEntity<ConsumedCouponDTO> consumeCoupon(OrderDTO orderDTO){
+        return webClient.build()
+                .post()
+                .uri("lb://coupon-api/coupon/consume")
+                .bodyValue(orderDTO)
                 .retrieve()
-                .toEntity(CouponDTO.class)
+                .toEntity(ConsumedCouponDTO.class)
+                .block();
+    }
+
+    public ResponseEntity<Boolean> consumeProductStock(List<OrderItemRequest> orderItems){
+        return webClient.build()
+                .post()
+                .uri("lb://store-api/store/consume-stock")
+                .bodyValue(orderItems)
+                .retrieve()
+                .toEntity(Boolean.class)
                 .block();
     }
     
-    public Mono<ResponseEntity<List<OrderItemResponse>>> consumeProductStock(List<OrderItemRequest> orderItems) {
-        return storeApiClient.post()
-                .uri("/products/consume-stock")
-                .bodyValue(orderItems)
-                .retrieve()
-                .toEntityList(new ParameterizedTypeReference<OrderItemResponse>() {})
-                .onErrorResume(WebClientResponseException.class, ex -> ex.getRawStatusCode() == 404 ? Mono.empty() : Mono.error(ex));
-    }
-    
     public ResponseEntity<Void> withdrawInvoiceAmountFromGuestBankAccount(TransactionRequestModel withdrawRequestModel) {
-        return bankApiClient.post()
-                .uri("/transaction/withdraw")
+        return webClient.build()
+                .post()
+                .uri("lb://bank-api/transaction/withdraw")
                 .bodyValue(withdrawRequestModel)
                 .retrieve()
                 .toBodilessEntity()
@@ -62,8 +58,9 @@ public class Client {
     }
 
     public ResponseEntity<Void> depositInvoiceAmountIntoMerchantBankAccount(TransactionRequestModel depositRequestModel){
-        return bankApiClient.post()
-                .uri("/transaction/deposit")
+        return webClient.build()
+                .post()
+                .uri("lb://bank-api/transaction/deposit")
                 .bodyValue(depositRequestModel)
                 .retrieve()
                 .toBodilessEntity()
@@ -71,11 +68,22 @@ public class Client {
     }
     
     public ResponseEntity<Void> sendOrderDetailsToNotificationsAPI(OrderDTO orderDTO) {
-        return notificationApiClient.post()
-                .uri("/notifications/send")
+        return webClient.build()
+                .post()
+                .uri("lb://notification-api/send")
                 .bodyValue(orderDTO)
                 .retrieve()
                 .toBodilessEntity()
+                .block();
+    }
+
+    public List<OrderItemResponse> fetchProductInformation(List<Long> productIDs) {
+        return webClient.build()
+                .get()
+                .uri("lb://product-api/product", uriBuilder -> uriBuilder.queryParam("ids", productIDs).build())
+                .retrieve()
+                .bodyToFlux(OrderItemResponse.class)
+                .collectList()
                 .block();
     }
 }
