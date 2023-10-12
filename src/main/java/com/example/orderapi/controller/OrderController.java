@@ -1,7 +1,7 @@
 package com.example.orderapi.controller;
 
-import com.example.orderapi.DTO.OrderDTO;
-import com.example.orderapi.DTO.OrderItemRequest;
+import com.example.orderapi.dto.OrderDTO;
+import com.example.orderapi.dto.OrderItemRequest;
 import com.example.orderapi.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,7 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping("/order")
 public class OrderController {
 
     @Autowired
@@ -21,10 +21,11 @@ public class OrderController {
 
     @PostMapping("/create")
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderDTO createOrder(@RequestParam(required = false) String couponCode,
+    public OrderDTO createOrder(@RequestParam String guestEmail,
+                                @RequestParam(required = false) String couponCode,
                                 @Valid @RequestBody List<OrderItemRequest> orderRequestItems) {
 
-        return orderService.createOrder(couponCode, orderRequestItems);
+        return orderService.createOrder(guestEmail, couponCode, orderRequestItems);
     }
 
     @GetMapping("/{guestEmail:.+}")

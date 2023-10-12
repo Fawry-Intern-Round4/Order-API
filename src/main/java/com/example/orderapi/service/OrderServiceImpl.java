@@ -1,12 +1,15 @@
 package com.example.orderapi.service;
 
 import com.example.orderapi.Client;
-import com.example.orderapi.DTO.*;
+import com.example.orderapi.dto.*;
 import com.example.orderapi.entity.Order;
+import com.example.orderapi.enums.Messages;
+import com.example.orderapi.exception.*;
 import com.example.orderapi.mapper.OrderMapper;
 import com.example.orderapi.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -30,63 +33,68 @@ public class OrderServiceImpl implements OrderService {
 
     Client client;
 
-    //TODO: add entity to order items colums (orderid, product id, quantity, price)
     @Override
-    public OrderDTO createOrder(String couponCode, List<OrderItemRequest> orderRequestItems) {
-        //TODO: check if CouponCode is valid
+    public OrderDTO createOrder(String guestEmail, String couponCode, List<OrderItemRequest> orderRequestItems) {
+        if (couponCode != null && client.validateCouponCode(couponCode).getBody().equals(false))
+            throw new InvalidCouponException(Messages.INVALID_COUPON.getMessage());
 
-        //TODO: consume coupon form coupon api
+        if (client.consumeProductStock(orderRequestItems).getBody().equals(false))
+            throw new StockNotAvailableException(Messages.STOCK_NOT_AVAILABLE.getMessage());
 
-        //TODO: consume product form store api if there is error throw exception
+        List<Long> productIds = orderRequestItems.stream().map(OrderItemRequest::getProductId).toList();
+        List<OrderItemResponse> orderItemsResponse = client.fetchProductInformation(productIds);
+        if (orderItemsResponse.isEmpty()) {
+            throw new ProductNotFoundException(Messages.PRODUCT_NOT_FOUND.getMessage());
+        }
 
-        //TODO: get all products form product api
-
-        //TODO: calculate invoice amount
-
-        //TODO: withdraw invoice amount from guest's bank account
-
-        //TODO: deposit invoice amount to merchant's bank account
-
-        //TODO: send notification to notification api
-
-        Mono<ResponseEntity<List<OrderItemResponse>>> stockResponse = client.consumeProductStock(orderRequestItems);
-
-        BigDecimal invoiceAmount = stockResponse.flatMap(response ->
-                        Mono.justOrEmpty(response.getBody())
-                                .map(orderItemResponses -> orderItemResponses.stream()
-                                        .filter(OrderItemResponse::isAvailable)
-                                        .map(orderItemResponse -> orderItemResponse.getPrice()
-                                                .multiply(new BigDecimal(orderItemResponse.getQuantity())))
-                                        .reduce(BigDecimal.ZERO, BigDecimal::add))
-                                .defaultIfEmpty(BigDecimal.ZERO))
+        BigDecimal invoiceAmount = Mono.just(orderItemsResponse)
+                .map(orderItems -> orderItems.stream()
+                        .map(orderItem -> orderItem.getPrice().multiply(BigDecimal.valueOf(orderItem.getQuantity())))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .defaultIfEmpty(BigDecimal.ZERO)
                 .block();
 
-        CouponDTO couponDTO = null;
-        if (client.validateCouponCode(couponCode).getBody().equals(true)){
-            couponDTO = client.consumeCoupon(couponCode).getBody();
-            if (couponDTO.getType().equals("fixed")) invoiceAmount = invoiceAmount.subtract(couponDTO.getValue());
-            else invoiceAmount = invoiceAmount.subtract(invoiceAmount.multiply(couponDTO.getValue().divide(BigDecimal.valueOf(100))));
-        }
-        else {
-            //TODO: throw exception
-        }
-        // withdraw invoice amount from guest's bank account
+        OrderDTO orderDTO = new OrderDTO();
+        orderDTO.setAmount(invoiceAmount);
+        orderDTO.setCouponCode(couponCode);
+        orderDTO.setGuestEmail(guestEmail);
+        OrderDTO orderDTO1 = saveOrder(orderDTO);
+
+        ResponseEntity<ConsumedCouponDTO> consumedCouponDTOResponseEntity= client.consumeCoupon(orderDTO1);
+        if (consumedCouponDTOResponseEntity.getStatusCode() != HttpStatus.OK)
+            throw new UnableToConsumeCouponException(Messages.UNABLE_TO_CONSUME_COUPON.getMessage());
+
+        ConsumedCouponDTO consumedCouponDTO = consumedCouponDTOResponseEntity.getBody();
+        orderDTO1.setAmount(orderDTO1.getAmount().subtract(consumedCouponDTO.getActualDiscount()));
+        orderDTO1.setCouponID(consumedCouponDTO.getId());
+
+        List<OrderItemDTO> orderItemsDTO = orderItemsResponse.stream()
+                .map(response -> {
+                    OrderItemDTO orderItemDTO = new OrderItemDTO();
+                    orderItemDTO.setProductID(response.getProductId());
+                    orderItemDTO.setQuantity(response.getQuantity());
+                    orderItemDTO.setPrice(response.getPrice());
+                    orderItemDTO.setOrderID(orderDTO1.getId());
+                    return orderItemDTO;
+                })
+                .collect(Collectors.toList());
+        orderDTO1.setOrderItems(orderItemsDTO);
+        saveOrder(orderDTO1);
+
+        // transactions for invoice value withdraw and depost
         TransactionRequestModel withdrawRequestModel = new TransactionRequestModel();
         withdrawRequestModel.setAmount(invoiceAmount);
-        // TODO: set field values of transaction request DTO, i.e., cardNumber and cvv.
-        client.withdrawInvoiceAmountFromGuestBankAccount(withdrawRequestModel);
+        // TODO: set field values of transaction request dto, i.e., cardNumber and cvv.
+        ResponseEntity<Void> withdrawTransactionResponse = client.withdrawInvoiceAmountFromGuestBankAccount(withdrawRequestModel);
+        if (withdrawTransactionResponse.getStatusCode() != HttpStatus.OK)
+            throw new FailedPaymentTransactionException(Messages.FAILED_WITHDRAW_PAYMENT_TRANSACTION.getMessage());
 
-        // deposit invoice amount to merchant's bank account
         TransactionRequestModel depositRequestModel = new TransactionRequestModel();
         depositRequestModel.setAmount(invoiceAmount);
         depositRequestModel.setCardNumber(systemBankNumber);
-        client.depositInvoiceAmountIntoMerchantBankAccount(depositRequestModel);
-
-        // create and store order
-        OrderDTO orderDTO = new OrderDTO();
-        orderDTO.setAmount(invoiceAmount);
-        orderDTO.setCouponID(couponDTO.getId());
-        saveOrder(orderDTO);
+        ResponseEntity<Void> depositTransactionResponse = client.depositInvoiceAmountIntoMerchantBankAccount(depositRequestModel);
+        if (depositTransactionResponse.getStatusCode() != HttpStatus.OK)
+            throw new FailedPaymentTransactionException(Messages.FAILED_DEPOSIT_PAYMENT_TRANSACTION.getMessage());
 
         // send order notifications
         client.sendOrderDetailsToNotificationsAPI(orderDTO);
@@ -100,8 +108,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void saveOrder(OrderDTO orderDTO) {
-        orderRepository.save(orderMapper.toEntity(orderDTO));
+    public OrderDTO saveOrder(OrderDTO orderDTO) {
+        Order savedOrder = orderRepository.save(orderMapper.toEntity(orderDTO));
+        return orderMapper.toDTO(savedOrder);
     }
 
     @Override

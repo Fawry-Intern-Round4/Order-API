@@ -1,6 +1,6 @@
 package com.example.orderapi.mapper;
 
-import com.example.orderapi.DTO.OrderDTO;
+import com.example.orderapi.dto.OrderDTO;
 import com.example.orderapi.entity.Order;
 import org.mapstruct.Mapper;
 
