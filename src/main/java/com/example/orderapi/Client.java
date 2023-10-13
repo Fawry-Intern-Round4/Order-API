@@ -13,19 +13,19 @@ public class Client {
         this.webClient = webClientBuilder;
     }
 
-    public ResponseEntity<Boolean> validateCouponCode(String couponCode){
+    public ResponseEntity<CustomResponse> validateCouponCode(String couponCode){
         return webClient.build()
-                .post()
-                .uri("lb://coupon-api/coupon/validate", uriBuilder -> uriBuilder.queryParam("code", couponCode).build())
+                .put()
+                .uri("lb://coupon-api/coupons/validate", uriBuilder -> uriBuilder.queryParam("code", couponCode).build())
                 .retrieve()
-                .toEntity(Boolean.class)
+                .toEntity(CustomResponse.class)
                 .block();
     }
     
     public ResponseEntity<ConsumedCouponDTO> consumeCoupon(OrderDTO orderDTO){
         return webClient.build()
-                .post()
-                .uri("lb://coupon-api/coupon/consume")
+                .put()
+                .uri("lb://coupon-api/coupons/consume")
                 .bodyValue(orderDTO)
                 .retrieve()
                 .toEntity(ConsumedCouponDTO.class)
