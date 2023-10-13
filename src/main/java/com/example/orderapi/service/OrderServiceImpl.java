@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -32,6 +33,10 @@ public class OrderServiceImpl implements OrderService {
     private String systemBankNumber;
 
     Client client;
+
+    public OrderServiceImpl(WebClient.Builder webClientBuilder) {
+        this.client = new Client(webClientBuilder);
+    }
 
     @Override
     public OrderDTO createOrder(String guestEmail, String couponCode, List<OrderItemRequest> orderRequestItems) {

@@ -1,17 +1,12 @@
 package com.example.orderapi;
 
 import com.example.orderapi.dto.*;
-import com.example.orderapi.mapper.OrderMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 
 public class Client {
-    @Autowired
-    OrderMapper orderMapper;
-
     private final WebClient.Builder webClient;
 
     public Client(WebClient.Builder webClientBuilder) {
