@@ -15,13 +15,12 @@ public class OrderItem {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
     @Column(name = "product_id")
     private Long productID;
 
     private BigDecimal price;
-
     private int quantity;
 }

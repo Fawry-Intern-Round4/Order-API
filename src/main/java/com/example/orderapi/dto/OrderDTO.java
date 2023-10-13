@@ -11,7 +11,7 @@ public class OrderDTO {
     private Long id;
     private String guestEmail;
     private String couponCode;
-    private Integer couponID;
+    private Long couponID;
     private BigDecimal amount;
     private Date createdAt;
     private List<OrderItemDTO> orderItems;

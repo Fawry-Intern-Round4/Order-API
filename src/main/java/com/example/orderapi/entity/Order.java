@@ -25,9 +25,6 @@ public class Order extends BaseEntity{
     @Column
     private BigDecimal amount;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinTable(name = "order_items",
-            joinColumns = {@JoinColumn(name = "order_id", referencedColumnName = "id")},
-            inverseJoinColumns = {@JoinColumn(name = "id", referencedColumnName = "id")})
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "order")
     private List<OrderItem> orderItems = new ArrayList<>();
 }

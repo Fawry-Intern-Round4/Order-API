@@ -1,17 +1,16 @@
 package com.example.orderapi.dto;
 
 import lombok.Data;
-import lombok.Getter;
 
 import java.math.BigDecimal;
 
 @Data
-@Getter
 public class OrderItemResponse {
-    private Long productId;
-    private Long storeId;
-    private String productName;
+    private Long id;
+    private String code;
+    private String name;
+    private String description;
     private BigDecimal price;
-    private boolean available;
+    private String image;
     private int quantity;
 }
