@@ -1,7 +1,9 @@
 package com.example.orderapi.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -10,6 +12,7 @@ import java.util.List;
 @Table (name = "orders")
 @Entity (name = "order")
 @Data
+@EqualsAndHashCode(callSuper=true)
 public class Order extends BaseEntity{
     @Id
     @Column(name = "id")
@@ -25,6 +28,7 @@ public class Order extends BaseEntity{
     @Column
     private BigDecimal amount;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "order")
-    private List<OrderItem> orderItems = new ArrayList<>();
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinColumn(name="order_id")
+    private List<OrderItem> orderItems;
 }
