@@ -39,18 +39,26 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDTO createOrder(String guestEmail, String couponCode, List<OrderItemRequest> orderRequestItems) {
-        if (couponCode != null && client.validateCouponCode(couponCode).getBody().equals(false))
+    public OrderDTO createOrder(String guestEmail, String couponCode, OrderRequestModel orderRequestModel) {
+        List<OrderRequestItem> orderRequestItems = orderRequestModel.getOrderRequestItems();
+
+        if (couponCode != null && !couponCode.isEmpty() && client.validateCouponCode(couponCode).getStatusCode() != HttpStatus.OK)
             throw new InvalidCouponException(Messages.INVALID_COUPON.getMessage());
 
         if (client.consumeProductStock(orderRequestItems).getBody().equals(false))
             throw new StockNotAvailableException(Messages.STOCK_NOT_AVAILABLE.getMessage());
 
-        List<Long> productIds = orderRequestItems.stream().map(OrderItemRequest::getProductId).toList();
-        List<OrderItemResponse> orderItemsResponse = client.fetchProductInformation(productIds);
+        List<Long> productIds = orderRequestItems.stream().map(OrderRequestItem::getProductId).toList();
+        List<OrderResponseItem> orderItemsResponse = client.fetchProductInformation(productIds);
         if (orderItemsResponse.isEmpty()) {
             throw new ProductNotFoundException(Messages.PRODUCT_NOT_FOUND.getMessage());
         }
+
+        orderItemsResponse.forEach(response -> {
+            orderRequestItems.stream()
+                    .filter(req -> req.getProductId().equals(response.getId()))
+                    .findFirst().ifPresent(request -> response.setQuantity(request.getQuantity()));
+        });
 
         BigDecimal invoiceAmount = Mono.just(orderItemsResponse)
                 .map(orderItems -> orderItems.stream()
@@ -64,46 +72,47 @@ public class OrderServiceImpl implements OrderService {
         orderDTO.setCouponCode(couponCode);
         orderDTO.setGuestEmail(guestEmail);
         OrderDTO orderDTO1 = saveOrder(orderDTO);
+        orderDTO1.setCouponCode(couponCode);
 
-        ResponseEntity<ConsumedCouponDTO> consumedCouponDTOResponseEntity= client.consumeCoupon(orderDTO1);
-        if (consumedCouponDTOResponseEntity.getStatusCode() != HttpStatus.OK)
-            throw new UnableToConsumeCouponException(Messages.UNABLE_TO_CONSUME_COUPON.getMessage());
+        if (couponCode != null && !couponCode.isEmpty()) {
+            ResponseEntity<ConsumedCouponDTO> consumedCouponDTOResponseEntity= client.consumeCoupon(orderDTO1);
+            if (consumedCouponDTOResponseEntity.getStatusCode() != HttpStatus.OK)
+                throw new UnableToConsumeCouponException(Messages.UNABLE_TO_CONSUME_COUPON.getMessage());
 
-        ConsumedCouponDTO consumedCouponDTO = consumedCouponDTOResponseEntity.getBody();
-        orderDTO1.setAmount(orderDTO1.getAmount().subtract(consumedCouponDTO.getActualDiscount()));
-        orderDTO1.setCouponID(consumedCouponDTO.getId());
+            ConsumedCouponDTO consumedCouponDTO = consumedCouponDTOResponseEntity.getBody();
+            orderDTO1.setAmount(orderDTO1.getAmount().subtract(consumedCouponDTO.getActualDiscount()));
+            orderDTO1.setCouponID(consumedCouponDTO.getId());
+        }
 
         List<OrderItemDTO> orderItemsDTO = orderItemsResponse.stream()
                 .map(response -> {
                     OrderItemDTO orderItemDTO = new OrderItemDTO();
-                    orderItemDTO.setProductID(response.getProductId());
+                    orderItemDTO.setProductID(response.getId());
                     orderItemDTO.setQuantity(response.getQuantity());
                     orderItemDTO.setPrice(response.getPrice());
-                    orderItemDTO.setOrderID(orderDTO1.getId());
                     return orderItemDTO;
                 })
                 .collect(Collectors.toList());
         orderDTO1.setOrderItems(orderItemsDTO);
         saveOrder(orderDTO1);
 
-        // transactions for invoice value withdraw and depost
-        TransactionRequestModel withdrawRequestModel = new TransactionRequestModel();
-        withdrawRequestModel.setAmount(invoiceAmount);
-        // TODO: set field values of transaction request dto, i.e., cardNumber and cvv.
-        ResponseEntity<Void> withdrawTransactionResponse = client.withdrawInvoiceAmountFromGuestBankAccount(withdrawRequestModel);
+        // transactions for invoice value withdraw and deposit
+        TransactionRequestModel withdrawTransactionModel = orderRequestModel.getTransactionRequestModel();
+        withdrawTransactionModel.setAmount(invoiceAmount);
+        ResponseEntity<Void> withdrawTransactionResponse = client.withdrawInvoiceAmountFromGuestBankAccount(withdrawTransactionModel);
         if (withdrawTransactionResponse.getStatusCode() != HttpStatus.OK)
             throw new FailedPaymentTransactionException(Messages.FAILED_WITHDRAW_PAYMENT_TRANSACTION.getMessage());
 
-        TransactionRequestModel depositRequestModel = new TransactionRequestModel();
-        depositRequestModel.setAmount(invoiceAmount);
-        depositRequestModel.setCardNumber(systemBankNumber);
-        ResponseEntity<Void> depositTransactionResponse = client.depositInvoiceAmountIntoMerchantBankAccount(depositRequestModel);
+        TransactionRequestModel depositTransactionModel = new TransactionRequestModel();
+        depositTransactionModel.setAmount(invoiceAmount);
+        depositTransactionModel.setCardNumber(systemBankNumber);
+        ResponseEntity<Void> depositTransactionResponse = client.depositInvoiceAmountIntoMerchantBankAccount(depositTransactionModel);
         if (depositTransactionResponse.getStatusCode() != HttpStatus.OK)
             throw new FailedPaymentTransactionException(Messages.FAILED_DEPOSIT_PAYMENT_TRANSACTION.getMessage());
 
-        // send order notifications
-        client.sendOrderDetailsToNotificationsAPI(orderDTO);
-        return orderDTO;
+//         send order notifications
+//        client.sendOrderDetailsToNotificationsAPI(orderDTO);
+        return orderDTO1;
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.example.orderapi.controller;
 
 import com.example.orderapi.dto.OrderDTO;
-import com.example.orderapi.dto.OrderItemRequest;
+import com.example.orderapi.dto.OrderRequestModel;
 import com.example.orderapi.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +23,9 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderDTO createOrder(@RequestParam String guestEmail,
                                 @RequestParam(required = false) String couponCode,
-                                @Valid @RequestBody List<OrderItemRequest> orderRequestItems) {
+                                @Valid @RequestBody OrderRequestModel orderRequestModel) {
 
-        return orderService.createOrder(guestEmail, couponCode, orderRequestItems);
+        return orderService.createOrder(guestEmail, couponCode, orderRequestModel);
     }
 
     @GetMapping("/{guestEmail:.+}")

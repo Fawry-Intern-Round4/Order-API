@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class OrderItemResponse {
+public class OrderResponseItem {
     private Long id;
     private String code;
     private String name;

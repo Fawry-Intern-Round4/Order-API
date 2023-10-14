@@ -32,7 +32,7 @@ public class Client {
                 .block();
     }
 
-    public ResponseEntity<Boolean> consumeProductStock(List<OrderItemRequest> orderItems){
+    public ResponseEntity<Boolean> consumeProductStock(List<OrderRequestItem> orderItems){
         return webClient.build()
                 .post()
                 .uri("lb://store-api/store/consume-stock")
@@ -72,12 +72,12 @@ public class Client {
                 .block();
     }
 
-    public List<OrderItemResponse> fetchProductInformation(List<Long> productIDs) {
+    public List<OrderResponseItem> fetchProductInformation(List<Long> productIDs) {
         return webClient.build()
                 .get()
                 .uri("lb://product-api/product", uriBuilder -> uriBuilder.queryParam("ids", productIDs).build())
                 .retrieve()
-                .bodyToFlux(OrderItemResponse.class)
+                .bodyToFlux(OrderResponseItem.class)
                 .collectList()
                 .block();
     }
