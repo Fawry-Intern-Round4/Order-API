@@ -88,8 +88,11 @@ public class OrderServiceImpl implements OrderService {
                 .map(response -> {
                     OrderItemDTO orderItemDTO = new OrderItemDTO();
                     orderItemDTO.setProductID(response.getId());
+                    orderItemDTO.setProductName(response.getName());
+                    orderItemDTO.setProductPhoto(response.getImage());
                     orderItemDTO.setQuantity(response.getQuantity());
                     orderItemDTO.setPrice(response.getPrice());
+                    orderItemDTO.setOrderID(orderDTO1.getId());
                     return orderItemDTO;
                 })
                 .collect(Collectors.toList());
@@ -130,6 +133,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderDTO> findOrdersByCreatedAtBetween(Date from, Date to) {
         List<Order> orders = orderRepository.findOrdersByCreatedAtBetween(from, to).orElseGet(null);
+        return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderDTO> findAllOrders(){
+        List<Order> orders = orderRepository.findAll();
         return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
     }
 }

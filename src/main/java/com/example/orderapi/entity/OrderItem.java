@@ -20,6 +20,12 @@ public class OrderItem {
     @Column(name = "product_id")
     private Long productID;
 
+    @Column(name = "product_name")
+    private String productName;
+
+    @Column(name = "product_photo")
+    private String productPhoto;
+
     private BigDecimal price;
     private int quantity;
 }

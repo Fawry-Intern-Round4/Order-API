@@ -11,4 +11,5 @@ public interface OrderService {
     OrderDTO saveOrder(OrderDTO orderDTO);
     List<OrderDTO> findOrdersByGuestEmail(String guestEmail);
     List<OrderDTO> findOrdersByCreatedAtBetween(Date from, Date to);
+    List<OrderDTO> findAllOrders();
 }
