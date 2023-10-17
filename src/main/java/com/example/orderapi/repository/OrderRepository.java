@@ -10,5 +10,7 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<List<Order>> findOrdersByGuestEmail(String guestEmail);
-    Optional<List<Order>> findOrdersByCreatedAtBetween(Date from, Date to);
+    Optional<List<Order>> findOrdersByCreatedAtGreaterThanEqualAndCreatedAtLessThanEqual(Date from, Date to);
+    Optional<List<Order>> findOrdersByCreatedAtGreaterThanEqual(Date from);
+    Optional<List<Order>> findOrdersByCreatedAtLessThanEqual(Date to);
 }

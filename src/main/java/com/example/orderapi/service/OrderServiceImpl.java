@@ -132,13 +132,25 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderDTO> findOrdersByCreatedAtBetween(Date from, Date to) {
-        List<Order> orders = orderRepository.findOrdersByCreatedAtBetween(from, to).orElseGet(null);
+        List<Order> orders = orderRepository.findOrdersByCreatedAtGreaterThanEqualAndCreatedAtLessThanEqual(from, to).orElseGet(null);
         return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
     }
 
     @Override
     public List<OrderDTO> findAllOrders(){
         List<Order> orders = orderRepository.findAll();
+        return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderDTO> findOrdersByCreatedAtStartingFrom(Date from) {
+        List<Order> orders = orderRepository.findOrdersByCreatedAtGreaterThanEqual(from).orElseGet(null);
+        return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderDTO> findOrdersByCreatedAtEndingAt(Date to) {
+        List<Order> orders = orderRepository.findOrdersByCreatedAtLessThanEqual(to).orElseGet(null);
         return orders.stream().map(order -> orderMapper.toDTO(order)).collect(Collectors.toList());
     }
 }

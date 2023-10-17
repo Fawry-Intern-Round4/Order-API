@@ -12,4 +12,6 @@ public interface OrderService {
     List<OrderDTO> findOrdersByGuestEmail(String guestEmail);
     List<OrderDTO> findOrdersByCreatedAtBetween(Date from, Date to);
     List<OrderDTO> findAllOrders();
+    List<OrderDTO> findOrdersByCreatedAtStartingFrom(Date from);
+    List<OrderDTO> findOrdersByCreatedAtEndingAt(Date to);
 }

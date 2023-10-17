@@ -20,9 +20,20 @@ public class OrderController {
     @Autowired
     OrderService orderService;
 
-    @GetMapping()
-    public List<OrderDTO> allOrders() {
-        return orderService.findAllOrders();
+    @GetMapping
+    public List<OrderDTO> getOrdersByCreatedAt(
+            @RequestParam(value = "from", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date to) {
+
+        if (from != null && to != null) {
+            return orderService.findOrdersByCreatedAtBetween(from, to);
+        } else if (from != null) {
+            return orderService.findOrdersByCreatedAtStartingFrom(from);
+        } else if (to != null) {
+            return orderService.findOrdersByCreatedAtEndingAt(to);
+        } else {
+            return orderService.findAllOrders();
+        }
     }
 
     @PostMapping("/create")
@@ -37,12 +48,5 @@ public class OrderController {
     @GetMapping("/{guestEmail:.+}")
     public List<OrderDTO> ordersMadeByCustomer(@PathVariable String guestEmail) {
         return orderService.findOrdersByGuestEmail(guestEmail);
-    }
-
-    @GetMapping("/range")
-    public List<OrderDTO> ordersByCreatedAtBetween(@RequestParam(value = "from") @DateTimeFormat(pattern = "yyyy-MM-dd") Date from,
-                                                @RequestParam(value = "to") @DateTimeFormat(pattern = "yyyy-MM-dd") Date to) {
-
-        return orderService.findOrdersByCreatedAtBetween(from, to);
     }
 }
