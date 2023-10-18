@@ -7,19 +7,19 @@ import lombok.NoArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Validated
-public class OrderDTO {
-    private Long id;
-    private String guestEmail;
-    private String couponCode;
-    private BigDecimal amount;
-    private Date createdAt;
-    private List<OrderItemDTO> orderItems;
+public class CouponRequestDTO {
+
+    private String code;
+
+    private String customerEmail;
+
+    private BigDecimal orderPrice;
+
+    private Long orderId;
 }

@@ -1,34 +1,41 @@
 package com.example.orderapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Table (name = "orders")
-@Entity (name = "order")
-@Data
-@EqualsAndHashCode(callSuper=true)
-public class Order extends BaseEntity{
+@Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class Order{
     @Id
-    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "guest_email")
+    @NotBlank(message = "Guest email is mandatory")
+    @Email(message = "Guest email must be a valid email")
     private String guestEmail;
 
-    @Column(name="coupon_id", nullable = true)
-    private Long couponID;
+    private String couponCode;
 
-    @Column
+    @NotNull(message = "Amount is mandatory")
+    @Digits(integer = 10, fraction = 10, message = "Amount must be a number")
+    @PositiveOrZero(message = "Amount must be greater than or equal to 0")
     private BigDecimal amount;
 
+    @CreationTimestamp
+    private Date createdAt;
+
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinColumn(name="order_id")
+    @JoinColumn(name="orderId")
     private List<OrderItem> orderItems;
 }

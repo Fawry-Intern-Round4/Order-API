@@ -7,8 +7,7 @@ import java.util.Date;
 import java.util.List;
 
 public interface OrderService {
-    OrderDTO createOrder(String guestEmail, String couponCode, OrderRequestModel orderRequestModel);
-    OrderDTO saveOrder(OrderDTO orderDTO);
+    OrderDTO createOrder(OrderRequestModel orderRequestModel);
     List<OrderDTO> findOrdersByGuestEmail(String guestEmail);
     List<OrderDTO> findOrdersByCreatedAtBetween(Date from, Date to);
 }
