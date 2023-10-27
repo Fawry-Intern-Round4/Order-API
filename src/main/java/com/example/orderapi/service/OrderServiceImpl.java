@@ -32,18 +32,28 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderDTO createOrder(OrderRequestModel orderRequestModel) {
         checkIfCouponIsValidIfExists(orderRequestModel.getCouponCode(), orderRequestModel.getGuestEmail());
+
         webClientService.checkIfProductsOutOfStock(orderRequestModel.getOrderRequestItems());
+
         List<ProductResponse> productResponses = webClientService.getProducts(orderRequestModel.getProductIds());
+
         BigDecimal invoiceAmount = calculateInvoiceAmount(orderRequestModel.getOrderRequestItems(), productResponses);
         BigDecimal invoiceAmountAfterDiscount = addDiscountIfCouponExists(invoiceAmount, orderRequestModel.getCouponCode(), orderRequestModel.getGuestEmail());
+
         applyPaymentTransactions(orderRequestModel.getTransactionRequestModel(), invoiceAmountAfterDiscount);
+
         webClientService.consumeStock(orderRequestModel.getOrderRequestItems());
+
         OrderDTO orderDTO = createOrder(orderRequestModel, productResponses, invoiceAmountAfterDiscount);
+
         consumeCouponIfCouponExists(
                 orderRequestModel.getCouponCode()
                 , orderRequestModel.getGuestEmail()
-                , invoiceAmount, orderDTO.getId());
+                , invoiceAmount
+                , orderDTO.getId());
+
         webClientService.sendOrderDetailsToNotificationsAPI(orderDTO);
+
         return orderDTO;
     }
 
