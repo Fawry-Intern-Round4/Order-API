@@ -30,9 +30,14 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderDTO> findOrdersByCreatedAtBetween(@RequestParam(value = "from") @DateTimeFormat(pattern = "yyyy-MM-dd") Date from,
-                                                       @RequestParam(value = "to") @DateTimeFormat(pattern = "yyyy-MM-dd") Date to) {
-
+    public List<OrderDTO> findOrdersByCreatedAtBetween(@RequestParam(value = "from", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date from,
+                                                       @RequestParam(value = "to", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date to) {
+        if (to == null) {
+            to = new Date();
+        }
+        if (from == null) {
+            from = new Date(to.getTime() - 50 * 31536000000L);
+        }
         return orderService.findOrdersByCreatedAtBetween(from, to);
     }
 }
